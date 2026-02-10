@@ -9,3 +9,8 @@ help:
 build: ## Build the application
 	CGO_ENABLED=0 go build -ldflags="-X 'main.Version=${VERSION}'" -mod=mod -o shopify-status-rss .
 
+tag: ## Create a new release tag and push to Docker Hub
+	docker build -t adampresley/shopify-status-rss:${VERSION} .
+	docker build -t adampresley/shopify-status-rss:latest .
+	docker push adampresley/shopify-status-rss:${VERSION}
+	docker push adampresley/shopify-status-rss:latest
