@@ -43,8 +43,7 @@ services:
       retries: 3
   shopify-status-rss:
     build:
-      context: ./
-      dockerfile: Dockerfile
+      image: adampresley/shopify-status-rss
     env_file:
       - ./.env
     ports:
