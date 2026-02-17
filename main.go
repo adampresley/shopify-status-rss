@@ -410,9 +410,8 @@ func generateErrorFeedItem(states ParsedStatusCollection) RssItem {
 	fmt.Fprintf(&description, `<ul>`)
 
 	for _, status := range states {
-		fmt.Fprintf(&description, `<li>%s - %s</li>`, status.Service.ServiceName, status.Status.Status)
-
 		if status.Status.IsError {
+			fmt.Fprintf(&description, `<li>%s - %s</li>`, status.Service.ServiceName, status.Status.Status)
 			servicesWithIssuesCount++
 		}
 	}
