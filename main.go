@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -16,6 +18,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/adampresley/httphelpers/responses"
 	"github.com/adampresley/mux"
+	"github.com/adampresley/rester"
+	"github.com/adampresley/rester/clientoptions"
 	"github.com/glebarez/sqlite"
 	"github.com/hanagantig/cron"
 	"gorm.io/driver/postgres"
@@ -25,8 +29,10 @@ import (
 var (
 	Version string = "development"
 
-	config *Config
-	db     *gorm.DB
+	config               *Config
+	db                   *gorm.DB
+	aleticsClientOptions *clientoptions.ClientOptions
+	useAletics           bool = false
 )
 
 /*
@@ -111,6 +117,13 @@ type RssItem struct {
 	PubDate     time.Time `xml:"pubDate"`
 }
 
+type AleticsPayload struct {
+	Token       string `json:"token"`
+	Path        string `json:"path"`
+	QueryString string `json:"queryString"`
+	Browser     string `json:"browser"`
+}
+
 /*
 *******************************************************
 Main
@@ -150,6 +163,16 @@ func main() {
 		&Service{}, &Status{}, &ServiceStatus{},
 		&Feed{}, &LastStatus{}, &CronLock{},
 	)
+
+	if config.AleticsURL != "" && config.AleticsToken != "" {
+		useAletics = true
+
+		aleticsClientOptions = clientoptions.New(config.AleticsURL,
+			clientoptions.WithHeaders(map[string]string{
+				"Content-Type": "text/plain;charset=UTF-8",
+			}),
+		)
+	}
 
 	if statuses, err = queryStatuses(); err != nil {
 		panic("error querying statuses: " + err.Error())
@@ -327,6 +350,10 @@ func statusRssHandler() http.HandlerFunc {
 			feed []*Feed
 			b    []byte
 		)
+
+		if err = postToAnalytics(r); err != nil {
+			slog.Error("error posting to analytics", "error", err)
+		}
 
 		if feed, err = queryFeed(10); err != nil {
 			responses.TextInternalServerError(w, "An unexpected error occurred while querying the feed")
@@ -512,6 +539,58 @@ func parsePageStatuses(doc *goquery.Document, services []*Service, statuses []*S
 	})
 
 	return result, nil
+}
+
+func postToAnalytics(r *http.Request) error {
+	var (
+		err    error
+		b      []byte
+		result rester.HttpResult
+	)
+
+	if !useAletics {
+		return nil
+	}
+
+	payload := AleticsPayload{
+		Token:       config.AleticsToken,
+		Path:        "/status.rss",
+		QueryString: "",
+		Browser:     getBrowser(r.UserAgent()),
+	}
+
+	if b, err = json.Marshal(payload); err != nil {
+		return fmt.Errorf("error marshaling Aletics payload. analytics not sent: %w", err)
+	}
+
+	_, result, err = rester.Post[string](aleticsClientOptions, "/track", bytes.NewReader(b))
+
+	if err != nil {
+		slog.Error("sending analytics to Aletics failed", "body", string(result.Body), "error", err)
+		return fmt.Errorf("error sending analytics to Aletics. analytics not sent: %w", err)
+	}
+
+	return nil
+}
+
+func getBrowser(ua string) string {
+	if strings.Contains(ua, "Firefox") {
+		return "Firefox"
+	}
+
+	if strings.Contains(ua, "Edg") {
+		return "Edge"
+	}
+
+	if strings.Contains(ua, "Chrome") {
+		return "Chrome"
+	}
+
+	if strings.Contains(ua, "Safari") {
+		return "Safari"
+	}
+
+	return "Unknown"
 }
 
 /*

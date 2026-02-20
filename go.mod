@@ -7,6 +7,7 @@ require (
 	github.com/adampresley/configinator v1.2.0
 	github.com/adampresley/httphelpers v1.1.3
 	github.com/adampresley/mux v1.0.0
+	github.com/adampresley/rester v1.2.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/hanagantig/cron v1.0.1
 	gorm.io/driver/postgres v1.6.0

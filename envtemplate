@@ -1,0 +1,14 @@
+HOST="localhost:3000"
+DSN="file:./shopify-status-rss.db"
+ALETICS_URL=""
+ALETICS_TOKEN=""
+CRON_SCHEDULE="*/30 * * * *"
+LOG_LEVEL="info"
+STATUS_PAGE_URL="https://my.shopifystatus.com"
+
+POSTGRES_USER=shopifystatus
+POSTGRES_PASSWORD=password
+POSTGRES_DB=shopify_status_rss
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+
